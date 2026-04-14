@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST BANK TỰ ĐỘNG</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --bg: #0d0d16; --card: #161625; --cyan: #00f2ff; --gold: #ffcc00; }
+        body { background: var(--bg); color: white; font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .box { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid #333; width: 100%; max-width: 400px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
+        button { background: var(--cyan); color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        .balance { color: var(--gold); font-size: 30px; font-weight: bold; margin: 10px 0; }
+        .qr-box { background: white; padding: 10px; border-radius: 10px; margin-top: 15px; display: inline-block; }
+        .qr-box img { width: 200px; height: 200px; }
+        .info { background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; border: 1px solid var(--cyan); }
+    </style>
+</head>
+<body>
+
+    <h2 style="color: var(--cyan)">HỆ THỐNG TEST BANK</h2>
+
+    <div id="auth-area" class="box">
+        <input type="text" id="auth-user" placeholder="Nhập tên tài khoản test...">
+        <input type="password" id="auth-pass" placeholder="Mật khẩu (tùy ý)...">
+        <button onclick="handleAuth()">ĐĂNG NHẬP / ĐĂNG KÝ</button>
+    </div>
+
+    <div id="user-area" class="box" style="display:none;">
+        <div>Tài khoản: <b id="display-name" style="color:var(--cyan)"></b></div>
+        <div class="balance"><span id="user-balance">0</span> <small>VNĐ</small></div>
+        
+        <hr border="0.5" style="border-color: #333;">
+        
+        <h3 style="color: var(--gold); margin-bottom: 5px;">QUÉT MÃ ĐỂ NẠP</h3>
+        <div class="qr-box">
+            <img id="qr-img" src="" alt="Mã QR Bank">
+        </div>
+
+        <div class="info">
+            NGÂN HÀNG: <b>MB BANK</b><br>
+            STK: <b>0588807300000</b><br> NỘI DUNG: <b style="color:var(--cyan); font-size: 18px;">NAP <span id="user-id-note"></span></b>
+        </div>
+        <p style="font-size: 11px; color: #888; margin-top: 10px;">(Tiền sẽ tự cộng sau 30s - 1 phút)</p>
+    </div>
+
+<script>
+    // CẤU HÌNH FIREBASE CỦA BẠN (GIỮ NGUYÊN)
+    const firebaseConfig = {
+        apiKey: "AIzaSyBk6R1TDZeAxh37JQLgL_6Wl0v8m8Sg0",
+        authDomain: "shopctv-61f96.firebaseapp.com",
+        databaseURL: "https://shopctv-61f96-default-rtdb.asia-southeast1.firebasedatabase.app/", 
+        projectId: "shopctv-61f96",
+        storageBucket: "shopctv-61f96.firebasestorage.app",
+        messagingSenderId: "610663182342",
+        appId: "1:610663182342:web:83e255ec7921609395f190"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function handleAuth() {
+        const user = document.getElementById('auth-user').value.trim().toLowerCase();
+        const pass = document.getElementById('auth-pass').value.trim();
+        if(!user || !pass) return alert("Nhập đủ thông tin!");
+
+        db.ref('users/' + user).once('value', (snap) => {
+            if(!snap.val()) {
+                db.ref('users/' + user).set({ password: pass, balance: 0 }).then(() => enterShop(user));
+            } else {
+                if(snap.val().password === pass) enterShop(user);
+                else alert("Sai mật khẩu!");
+            }
+        });
+    }
+
+    function enterShop(user) {
+        document.getElementById('auth-area').style.display = 'none';
+        document.getElementById('user-area').style.display = 'block';
+        document.getElementById('display-name').innerText = user;
+        document.getElementById('user-id-note').innerText = user;
+
+        // TẠO QR VIETQR (Thay MB bằng ngân hàng của bạn, ví dụ: VCB, ICB...)
+        // Link này sẽ tự điền STK, Số tiền=0, và Nội dung là "NAP user"
+        const mySTK = "0588807300000"; // THAY STK CỦA BẠN VÀO ĐÂY
+        const myBank = "MB"; // THAY TÊN VIẾT TẮT NGÂN HÀNG VÀO ĐÂY
+        const qrUrl = `https://img.vietqr.io/image/${myBank}-${mySTK}-compact2.png?amount=0&addInfo=NAP%20${user}`;
+        document.getElementById('qr-img').src = qrUrl;
+
+        // Lắng nghe số dư nhảy realtime
+        db.ref('users/' + user).on('value', (snap) => {
+            if(snap.val()) document.getElementById('user-balance').innerText = Number(snap.val().balance).toLocaleString();
+        });
+    }
+</script>
+</body>
+</html>
